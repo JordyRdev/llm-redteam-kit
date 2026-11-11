@@ -1,0 +1,28 @@
+{
+  "name": "llm-redteam-kit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Red-team your chatbot in 5 minutes: OWASP Top 10 for LLM Applications 2026 attacks with deterministic canary checks, nightly CI and a public report.",
+  "license": "MIT",
+  "author": "JordyRdev",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "scan": "tsx src/cli.ts",
+    "demo": "tsx demo/bot.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm test"
+  },
+  "dependencies": {
+    "tsx": "^4.20.0",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.5"
+  }
+}
