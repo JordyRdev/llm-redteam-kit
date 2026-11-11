@@ -1,0 +1,76 @@
+name: Red team
+
+on:
+  schedule:
+    - cron: "17 3 * * *" # nightly
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["redteam.yml", "attacks/**", "src/**", "demo/**", ".github/workflows/redteam.yml"]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: redteam
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      gate: ${{ steps.scan.outcome }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Scan
+        id: scan
+        continue-on-error: true
+        env:
+          # Add these as repository secrets if your config uses them.
+          TARGET_API_KEY: ${{ secrets.TARGET_API_KEY }}
+          JUDGE_API_KEY: ${{ secrets.JUDGE_API_KEY }}
+        run: npm run scan
+
+      - uses: actions/configure-pages@v5
+        id: pages
+        continue-on-error: true
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.pages.outcome == 'success'
+        with:
+          path: report
+      - uses: actions/upload-artifact@v4
+        with:
+          name: redteam-report
+          path: report
+
+  publish:
+    needs: scan
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deploy
+        continue-on-error: true
+
+  gate:
+    needs: [scan, publish]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail when the security gate failed
+        if: needs.scan.outputs.gate != 'success'
+        run: |
+          echo "::error::The red-team gate failed. See the job summary or the report."
+          exit 1
